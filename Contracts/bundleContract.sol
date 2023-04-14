@@ -1,4 +1,4 @@
-// This smart contract allows you to create a bundle of tokens. The bundle is made out of base tokens in various proportions that can be minted and burned by the users, but follows the ERC20 standard for any other purpose.
+// This smart contract allows you to mint/burn a bundle of tokens. The bundle is made out of base tokens in various proportions that can be minted and burned by the users, but follows the ERC20 standard for any other purpose.
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract bundleContract is ERC20, ReentrancyGuard {
+contract BundleContract is ERC20, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     address[] public tokens;
@@ -25,16 +25,11 @@ contract bundleContract is ERC20, ReentrancyGuard {
     /// @param symbol The symbol of the token bundle.
     /// @param _tokens The array of token addresses in the bundle.
     /// @param _proportions The array of proportions for each token in the bundle.
-    constructor(
-        string memory name,
-        string memory symbol,
-        address[] memory _tokens,
-        uint256[] memory _proportions
-    ) ERC20(name, symbol) {
+    constructor(string memory name, string memory symbol, address[] memory _tokens, uint256[] memory _proportions) ERC20(name, symbol) {
         // Array checks
         require(_tokens.length == _proportions.length, "Tokens and proportions length mismatch");
         require(_tokens.length > 0, "Tokens length must be greater than 0");
-        
+
         // Ensure no duplicate token addresses
         for (uint256 i = 0; i < _tokens.length; i++) {
             for (uint256 j = i + 1; j < _tokens.length; j++) {
@@ -56,7 +51,7 @@ contract bundleContract is ERC20, ReentrancyGuard {
     }
 
     /// @notice Mints a token bundle and sends it to the recipient.
-    /// @dev The tokens must first be approved to be spent by the bundleContract on behalf of msg.sender.
+    /// @dev The tokens must first be approved to be spent by the BundleContract on behalf of msg.sender.
     /// @param amount The amount of the token bundle to mint.
     /// @param recipient The address to receive the minted token bundle.
     function mint(uint256 amount, address recipient) external nonReentrant {
