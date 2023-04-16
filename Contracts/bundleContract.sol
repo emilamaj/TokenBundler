@@ -10,9 +10,9 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract BundleContract is ERC20, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    address[] public tokens;
-    uint256[] public proportions;
-    uint256 public totalProportions;
+    address[] public tokens; // Base tokens that make up the bundle
+    uint256[] public proportions; // Proportions of each base token in the bundle
+    uint256 public bundleAmount; // Amount of token units minted when base tokens are provided in the same amounts as the proportions.
 
     /// @notice Emitted when a new bundle is minted.
     event Minted(address indexed recipient, uint256 amount);
@@ -23,12 +23,14 @@ contract BundleContract is ERC20, ReentrancyGuard {
     /// @dev Initializes the token bundle contract.
     /// @param name The name of the token bundle.
     /// @param symbol The symbol of the token bundle.
+    /// @param _bundleAmount The amount of token units minted per unit of base tokens provided (wrt proportions).
     /// @param _tokens The array of token addresses in the bundle.
     /// @param _proportions The array of proportions for each token in the bundle.
-    constructor(string memory name, string memory symbol, address[] memory _tokens, uint256[] memory _proportions) ERC20(name, symbol) {
+    constructor(string memory name, string memory symbol, uint256 _bundleAmount, address[] memory _tokens, uint256[] memory _proportions) ERC20(name, symbol) {
         // Array checks
         require(_tokens.length == _proportions.length, "Tokens and proportions length mismatch");
         require(_tokens.length > 0, "Tokens length must be greater than 0");
+        require(_bundleAmount > 0, "Bundle amount must be greater than 0");
 
         // Ensure no duplicate token addresses
         for (uint256 i = 0; i < _tokens.length; i++) {
@@ -42,12 +44,9 @@ contract BundleContract is ERC20, ReentrancyGuard {
             require(_proportions[i] > 0, "Proportion cannot be zero");
         }
 
+        bundleAmount = _bundleAmount;
         tokens = _tokens;
         proportions = _proportions;
-
-        for (uint256 i = 0; i < _proportions.length; i++) {
-            totalProportions += _proportions[i];
-        }
     }
 
     /// @notice Mints a token bundle and sends it to the recipient.
@@ -59,7 +58,7 @@ contract BundleContract is ERC20, ReentrancyGuard {
         require(recipient != address(0), "Recipient cannot be the zero address");
 
         for (uint256 i = 0; i < tokens.length; i++) {
-            uint256 tokenAmount = amount * proportions[i] / totalProportions;
+            uint256 tokenAmount = amount * proportions[i] / bundleAmount;
             IERC20(tokens[i]).safeTransferFrom(msg.sender, address(this), tokenAmount);
         }
 
@@ -76,7 +75,7 @@ contract BundleContract is ERC20, ReentrancyGuard {
         _burn(msg.sender, amount); // OpenZeppelin's ERC20.sol has a _burn function that checks if the user has enough tokens to burn
 
         for (uint256 i = 0; i < tokens.length; i++) {
-            uint256 tokenAmount = amount * proportions[i] / totalProportions;
+            uint256 tokenAmount = amount * proportions[i] / bundleAmount;
             IERC20(tokens[i]).safeTransfer(recipient, tokenAmount);
         }
 

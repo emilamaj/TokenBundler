@@ -16,6 +16,7 @@ contract BundleFactory {
     function createBundleContract(
         string memory name,
         string memory symbol,
+        uint256 bundleAmount,
         address[] memory tokens,
         uint256[] memory proportions
     ) public returns (address bundleAddress) {
@@ -25,6 +26,7 @@ contract BundleFactory {
         BundleContract newContract = new BundleContract(
             name,
             symbol,
+            bundleAmount,
             tokens,
             proportions
         );
