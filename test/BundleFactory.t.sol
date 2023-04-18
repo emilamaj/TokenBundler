@@ -2,12 +2,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
+import "../forge-std/Test.sol";
+import "../forge-std/StdUtils.sol";
+import "../forge-std/console.sol";
+
 import "../Contracts/BundleFactory.sol";
 import "../Contracts/BundleContract.sol";
-import "../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract FactoryTest is BundleFactory {
+
+contract FactoryTest is BundleFactory, Test {
+    using SafeERC20 for IERC20;
+    
     BundleContract bundle;
     string constant bname = "Bundled USD";
     string constant bsymbol = "bdUSD";
@@ -47,14 +54,19 @@ contract FactoryTest is BundleFactory {
 
     function test_mintToken() public {
         // Fund the factory contract with tokens
-        deal(_usdt, 1e6); // Fund 1 USDT
-        deal(_dai, 1e18); // Fund 1 DAI
-        deal(_usdc, 1e6); // Fund 1 USDC
+        deal(_usdt, address(this), 1e6); // Fund 1 USDT
+        deal(_dai, address(this), 1e18); // Fund 1 DAI
+        deal(_usdc, address(this), 1e6); // Fund 1 USDC
+        
+        // Assert balances
+        assertEq(IERC20(_usdt).balanceOf(address(this)), 1e6, "USDT balance mismatch");
+        assertEq(IERC20(_dai).balanceOf(address(this)), 1e18, "DAI balance mismatch");
+        assertEq(IERC20(_usdc).balanceOf(address(this)), 1e6, "USDC balance mismatch");
 
         // Approve bundle contract to spend tokens
-        IERC20(_usdt).approve(address(bundle), 1e6);
-        IERC20(_dai).approve(address(bundle), 1e18);
-        IERC20(_usdc).approve(address(bundle), 1e6);
+        IERC20(_usdt).safeApprove(address(bundle), 1e6);
+        IERC20(_dai).safeApprove(address(bundle), 1e18);
+        IERC20(_usdc).safeApprove(address(bundle), 1e6);
 
         // Mint bundle token units
         bundle.mint(3e18, address(this)); // Mint 3 bdUSD
@@ -70,19 +82,104 @@ contract FactoryTest is BundleFactory {
         assertEq(bundle.balanceOf(address(this)), 0, "Bundle balance mismatch");
     }
 
-    function testFail_Transfer_InsufficientBalance() public {
+    function test_mint_InsufficientBalance() public {
         // Fund the factory contract with tokens
-        deal(_usdt, 1e6); // Fund 1 USDT
-        deal(_dai, 1e18); // Fund 1 DAI
-        deal(_usdc, 1e6); // Fund 1 USDC
+        deal(_usdt, address(this), 1e6); // Fund 1 USDT
+        deal(_dai, address(this), 1e18); // Fund 1 DAI
+        deal(_usdc, address(this), 5e5); // Fund 0.5 USDC
 
         // Approve bundle contract to spend tokens
-        IERC20(_usdt).approve(address(bundle), 1e6);
-        IERC20(_dai).approve(address(bundle), 1e18);
-        IERC20(_usdc).approve(address(bundle), 1e6);
+        IERC20(_usdt).safeApprove(address(bundle), 1e6);
+        IERC20(_dai).safeApprove(address(bundle), 1e18);
+        IERC20(_usdc).safeApprove(address(bundle), 1e6);
+
+        // Mint bundle token units
+        vm.expectRevert(); // Expect revert since we have not enough USDC
+        bundle.mint(3e18, address(this)); // Mint 3 bdUSD
+    }
+
+    function test_Transfer_InsufficientBalance() public {
+        // Fund the factory contract with tokens
+        deal(_usdt, address(this), 1e6); // Fund 1 USDT
+        deal(_dai, address(this), 1e18); // Fund 1 DAI
+        deal(_usdc, address(this), 1e6); // Fund 1 USDC
+
+        // Approve bundle contract to spend tokens
+        IERC20(_usdt).safeApprove(address(bundle), 1e6);
+        IERC20(_dai).safeApprove(address(bundle), 1e18);
+        IERC20(_usdc).safeApprove(address(bundle), 1e6);
 
         // Mint bundle token units
         bundle.mint(3e18, address(this)); // Mint 3 bdUSD
+        vm.expectRevert(); // Expect revert since we have insufficient balance
         bundle.transfer(_weth, 4e18); // Transfer 4 units of bdUSD to the WETH contract
     }
+
+    function test_Transfer() public {
+        // Fund the factory contract with tokens
+        deal(_usdt, address(this), 1e6); // Fund 1 USDT
+        deal(_dai, address(this), 1e18); // Fund 1 DAI
+        deal(_usdc, address(this), 1e6); // Fund 1 USDC
+
+        // Approve bundle contract to spend tokens
+        IERC20(_usdt).safeApprove(address(bundle), 1e6);
+        IERC20(_dai).safeApprove(address(bundle), 1e18);
+        IERC20(_usdc).safeApprove(address(bundle), 1e6);
+
+        // Mint bundle token units
+        bundle.mint(3e18, address(this)); // Mint 3 bdUSD
+
+        // Transfer bundle token units
+        bundle.transfer(_weth, 3e18); // Transfer 3 units of bdUSD to the WETH contract
+
+        // Check balances
+        assertEq(bundle.balanceOf(_weth), 3e18, "Bundle balance mismatch");
+        assertEq(bundle.balanceOf(address(this)), 0, "Bundle balance mismatch");
+    }
+
+    function test_Burn() public {
+        // Fund the factory contract with tokens
+        deal(_usdt, address(this), 1e6); // Fund 1 USDT
+        deal(_dai, address(this), 1e18); // Fund 1 DAI
+        deal(_usdc, address(this), 1e6); // Fund 1 USDC
+
+        // Approve bundle contract to spend tokens
+        IERC20(_usdt).safeApprove(address(bundle), 1e6);
+        IERC20(_dai).safeApprove(address(bundle), 1e18);
+        IERC20(_usdc).safeApprove(address(bundle), 1e6);
+
+        // Mint bundle token units
+        bundle.mint(3e18, address(this)); // Mint 3 bdUSD
+
+        // Burn bundle token units
+        bundle.burn(3e18, address(this)); // Burn 3 bdUSD and send the base tokens back to this contract
+
+        // Check balances
+        assertEq(bundle.balanceOf(address(this)), 0, "Bundle balance mismatch");
+        assertEq(IERC20(_usdt).balanceOf(address(this)), 1e6, "USDT balance mismatch");
+        assertEq(IERC20(_dai).balanceOf(address(this)), 1e18, "DAI balance mismatch");
+        assertEq(IERC20(_usdc).balanceOf(address(this)), 1e6, "USDC balance mismatch");
+    }
+
+    function test_Burn_InsufficientBalance() public {
+        // Fund the factory contract with tokens
+        deal(_usdt, address(this), 1e6); // Fund 1 USDT
+        deal(_dai, address(this), 1e18); // Fund 1 DAI
+        deal(_usdc, address(this), 1e6); // Fund 1 USDC
+
+        // Approve bundle contract to spend tokens
+        IERC20(_usdt).safeApprove(address(bundle), 1e6);
+        IERC20(_dai).safeApprove(address(bundle), 1e18);
+        IERC20(_usdc).safeApprove(address(bundle), 1e6);
+
+        // Mint bundle token units
+        bundle.mint(3e18, address(this)); // Mint 3 bdUSD
+
+        // Burn bundle token units
+        vm.expectRevert(); // Expect revert since we have insufficient balance
+        bundle.burn(4e18, address(this)); // Burn 4 bdUSD and send the base tokens back to this contract
+    }
 }
+
+// To run the test, run the following command in the terminal:
+// forge test -vv --fork-url https://mainnet.infura.io/v3/0ce674ab414048f580429a5bca905096
