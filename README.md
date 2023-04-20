@@ -1,14 +1,18 @@
 # Token Bundler
 
-This token bundler lets you create synthetic ERC20-compatible assets by wrapping together multiple tokens in predetermined proportions.
+This simple project was created to experiment around smart contract development with [Forge](https://github.com/foundry-rs/foundry)
+
+This token bundler lets you create a synthetic ERC20 asset by wrapping together multiple tokens in predetermined proportions.
 This permissionless system allows anyone to create a new token bundle, and anyone to trade it on Uniswap or other AMMs.
-Users can mint a given token bundle by depositing the underlying tokens, and redeem the underlying tokens by burning the token bundle.
+Users can mint some token bundle units by depositing the underlying tokens. They can then redeem the underlying tokens by burning units of the token bundle.
+
 
 Todo:
-- [ ] Add automated tests
-- [ ] Add user interface for creating token bundles
-- [ ] Add UI for minting and burning token bundles
-- [ ] Add UI for exploring the pricing opportunities of token bundles
+- [x] Add unit tests (already done)
+- [-] Fuzz testing
+- [ ] Invariant tests
+- [ ] Assembly implementation
+- [ ] Differential testing of Solidity/Assembly implementations
 
 ## Smart Contracts
 
